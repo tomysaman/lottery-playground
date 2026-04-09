@@ -9,7 +9,7 @@ My Playground - Lottery Picker (vibe coded)
 - Powerball (AU) picker
   - Generate numbers from 4 groups, base on how long the numbers haven't been drew
   - Adjust how many number you want to come out of the 4 groups
-  - Set how many sets you want to generated
+  - Set how many sets you want to generate
 
 ## To use
 
@@ -18,9 +18,9 @@ My Playground - Lottery Picker (vibe coded)
 
 ## Why
 
-- A lottery picker was one of my very first personal project that I wrote in PHP back in maybe 2002. It is fun to have AI to recreate some of its functionality.
-- I vibed coded a simple Powerball (AU) picker today, and purchased 8 games it generated. Let's see will I win anything.
+- A lottery picker was one of my very first personal project that I wrote in PHP back in maybe 2002. It is fun to have AI to recreate some of its functionality. And no, I don't have the php source anymore :()
+- I vibed coded a simple Powerball (AU) picker today, and purchased 8 games it generated. Let's see will I win anything today (2026-04-09).
 
 ## Vibe coding
 
-This is totally vibe coded using Claude Code Sonnet 4.6, done in about couple of hours (including putting them up in Github)
+This is totally vibe coded using Claude Code Sonnet 4.6, done in couple of hours.
