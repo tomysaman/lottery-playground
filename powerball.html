@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Powerball Number Picker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; padding: 2rem 1rem; }
+  h1 { text-align: center; font-size: 2rem; font-weight: 700; color: #f8fafc; margin-bottom: 0.25rem; }
+  .subtitle { text-align: center; color: #94a3b8; margin-bottom: 2rem; font-size: 0.9rem; }
+  .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; max-width: 1340px; margin-left: auto; margin-right: auto; }
+  .card h2 { font-size: 1rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+  .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+  label { font-size: 0.85rem; font-weight: 500; color: #cbd5e1; }
+  input[type="text"], input[type="number"], textarea {
+    background: #0f172a; border: 1px solid #475569; border-radius: 8px;
+    color: #e2e8f0; padding: 0.6rem 0.8rem; font-size: 0.9rem; width: 100%;
+    transition: border-color 0.15s;
+  }
+  input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
+    outline: none; border-color: #6366f1;
+  }
+  textarea { resize: vertical; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.82rem; }
+  input[type="file"] { background: #0f172a; border: 1px solid #475569; border-radius: 8px; color: #94a3b8; padding: 0.5rem 0.8rem; font-size: 0.88rem; width: 100%; cursor: pointer; }
+  input[type="file"]::file-selector-button { background: #334155; border: none; border-radius: 5px; color: #e2e8f0; padding: 0.3rem 0.7rem; font-size: 0.82rem; cursor: pointer; margin-right: 0.75rem; }
+  input[type="file"]::file-selector-button:hover { background: #475569; }
+  .hint { font-size: 0.75rem; color: #64748b; }
+  .btn {
+    display: block; width: 100%; max-width: 1340px; margin: 0 auto 1.5rem;
+    padding: 0.9rem; background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border: none; border-radius: 10px; color: #fff; font-size: 1rem; font-weight: 600;
+    cursor: pointer; transition: opacity 0.15s, transform 0.1s;
+  }
+  .btn:hover { opacity: 0.9; }
+  .btn:active { transform: scale(0.98); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .error { background: #450a0a; border: 1px solid #7f1d1d; border-radius: 8px; color: #fca5a5; padding: 0.8rem 1rem; margin-bottom: 1rem; max-width: 1340px; margin-left: auto; margin-right: auto; font-size: 0.88rem; }
+  /* Groups */
+  .groups { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  @media (max-width: 600px) { .groups { grid-template-columns: 1fr; } }
+  .group-box { background: #0f172a; border-radius: 8px; padding: 1rem; }
+  .group-box h3 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.6rem; }
+  .group-a h3 { color: #818cf8; }
+  .group-b h3 { color: #34d399; }
+  .group-c h3 { color: #e879f9; }
+  .group-d h3 { color: #fbbf24; }
+  .group-desc { font-size: 0.75rem; color: #64748b; margin-bottom: 0.5rem; }
+  .num-pills { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 0.25rem;
+    padding: 0.2rem 0.5rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600;
+  }
+  .pill-a { background: #1e1b4b; color: #818cf8; border: 1px solid #3730a3; }
+  .pill-b { background: #022c22; color: #34d399; border: 1px solid #065f46; }
+  .pill-c { background: #1c1017; color: #e879f9; border: 1px solid #86198f; }
+  .pill-d { background: #1a1500; color: #fbbf24; border: 1px solid #b45309; }
+  .pill-plain { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; }
+  .pill .weeks { font-weight: 400; font-size: 0.72rem; color: #64748b; }
+  /* Table */
+  .sets-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  .sets-table th { text-align: left; padding: 0.5rem 0.75rem; color: #64748b; font-weight: 500; font-size: 0.8rem; border-bottom: 1px solid #334155; }
+  .sets-table td { padding: 0.55rem 0.75rem; border-bottom: 1px solid #1e293b; }
+  .sets-table tr:last-child td { border-bottom: none; }
+  .sets-table tr:hover td { background: #1e293b; }
+  .set-num { color: #64748b; font-size: 0.82rem; width: 2.5rem; }
+  .num-from-a { display: inline-block; padding: 0.1rem 0.45rem; border-radius: 4px; background: #1e1b4b; color: #818cf8; font-weight: 600; margin: 0.1rem; }
+  .num-from-b { display: inline-block; padding: 0.1rem 0.45rem; border-radius: 4px; background: #022c22; color: #34d399; font-weight: 600; margin: 0.1rem; }
+  .num-from-c { display: inline-block; padding: 0.1rem 0.45rem; border-radius: 4px; background: #1c1017; color: #e879f9; font-weight: 600; margin: 0.1rem; }
+  .num-from-d { display: inline-block; padding: 0.1rem 0.45rem; border-radius: 4px; background: #1a1500; color: #fbbf24; font-weight: 600; margin: 0.1rem; }
+  .breakdown { font-size: 0.72rem; color: #475569; margin-top: 0.25rem; }
+  .legend { display: flex; gap: 1rem; font-size: 0.78rem; color: #64748b; margin-top: 0.75rem; }
+  .legend span { display: flex; align-items: center; gap: 0.3rem; }
+  .dot-a { width: 10px; height: 10px; background: #4f46e5; border-radius: 2px; }
+  .dot-b { width: 10px; height: 10px; background: #059669; border-radius: 2px; }
+  .dot-c { width: 10px; height: 10px; background: #a21caf; border-radius: 2px; }
+  .dot-d { width: 10px; height: 10px; background: #b45309; border-radius: 2px; }
+  /* Tab toggle for data source */
+  .tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+  .tab { padding: 0.4rem 0.9rem; border-radius: 6px; font-size: 0.82rem; font-weight: 500; cursor: pointer; border: 1px solid #334155; background: transparent; color: #94a3b8; transition: all 0.15s; }
+  .tab.active { background: #334155; color: #f8fafc; border-color: #475569; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+</style>
+</head>
+<body>
+
+<h1><span style="display:inline-flex;align-items:center;justify-content:center;width:2.6rem;height:2.6rem;background:radial-gradient(circle at 35% 35%, #4b5563, #111827);border-radius:50%;color:#f8fafc;font-size:1.7rem;font-weight:900;box-shadow:inset 0 -4px 10px rgba(0,0,0,0.5),0 3px 12px rgba(0,0,0,0.5);vertical-align:middle;margin-right:0.4rem;letter-spacing:0;">P</span> Powerball Number Picker</h1>
+<p class="subtitle">Frequency-based lottery number generator</p>
+
+<!-- Data Source Card -->
+<div class="card">
+  <h2>Data Source</h2>
+  <div style="margin-bottom:1rem;">
+    <button onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true' ? 'false' : 'true'); document.getElementById('howToAccordion').style.display = this.getAttribute('aria-expanded')==='true' ? 'block' : 'none'; this.querySelector('.chevron').style.transform = this.getAttribute('aria-expanded')==='true' ? 'rotate(90deg)' : 'rotate(0deg)';"
+      aria-expanded="false"
+      style="display:flex;align-items:center;gap:0.5rem;background:#0f172a;border:1px solid #334155;border-radius:8px;padding:0.6rem 1rem;font-size:0.82rem;color:#94a3b8;cursor:pointer;width:100%;text-align:left;">
+      <span class="chevron" style="display:inline-block;transition:transform 0.2s;font-size:0.7rem;">▶</span>
+      <strong style="color:#e2e8f0;">How to get the data</strong>
+    </button>
+    <div id="howToAccordion" style="display:none; padding:0.85rem 1rem; background:#0f172a; border:1px solid #334155; border-top:none; border-radius:0 0 8px 8px; font-size:0.82rem; color:#94a3b8; line-height:1.7;">
+      <ol style="margin:0 0 0 1.2rem; display:flex; flex-direction:column; gap:0.3rem;">
+        <li>Go to <a href="https://www.thelott.com/powerball/results" target="_blank" style="color:#818cf8;">thelott.com/powerball/results</a></li>
+        <li>Scroll down to the <strong style="color:#e2e8f0;">Statistics</strong> section</li>
+        <li>Click the <strong style="color:#e2e8f0;">"Last Drawn"</strong> tab to see how many weeks ago each number was last drawn</li>
+        <li>Select all the text in the <strong style="color:#e2e8f0;">Winning Numbers</strong> table (the number + weeks columns)</li>
+        <li>Copy and paste it into the textarea below</li>
+      </ol>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('paste')">Paste data</button>
+    <button class="tab" onclick="switchTab('file')">Load from file path</button>
+  </div>
+
+  <div id="tab-paste" class="tab-panel active">
+    <div class="form-group">
+      <label for="pasteData">Paste frequency data</label>
+      <textarea id="pasteData" rows="10" placeholder="    1 4 weeks&#10;    2 11 weeks&#10;    3 30 weeks&#10;   20 0 weeks&#10;..."></textarea>
+      <span class="hint">Each line: &lt;number&gt; &lt;weeks&gt; week(s) — tolerant of extra spaces, tabs, and variations.</span>
+    </div>
+  </div>
+
+  <div id="tab-file" class="tab-panel">
+    <div class="form-group">
+      <label for="filePicker">Select file from your computer</label>
+      <input type="file" id="filePicker" accept=".txt,text/plain" onchange="loadFile(this)">
+      <span class="hint">Pick the frequency <code>.txt</code> file — works with <code>file:///</code> (no server needed).</span>
+    </div>
+    <div id="fileStatus" style="margin-top:0.5rem; font-size:0.8rem; color:#64748b;"></div>
+  </div>
+</div>
+
+<!-- Settings Card -->
+<div class="card">
+  <h2>Settings</h2>
+  <div class="form-row">
+    <div class="form-group">
+      <label for="numSets">Number of sets to generate</label>
+      <input type="number" id="numSets" value="8" min="1" max="50">
+    </div>
+  </div>
+  <div style="margin-top:1rem; padding:0.75rem 1rem; background:#0f172a; border:1px solid #334155; border-radius:8px; font-size:0.82rem; color:#94a3b8;">
+    The picks from Group A, B, C and D must <strong style="color:#e2e8f0;">sum to exactly 7</strong>. Current total: <strong id="pickTotal" style="color:#f8fafc;">7</strong>
+    <span id="pickTotalStatus" style="margin-left:0.4rem;"></span>
+  </div>
+  <div class="form-row" style="margin-top:1rem;">
+    <div class="form-group">
+      <label for="pickA">Numbers from <span style="color:#818cf8;">Group A</span> (overdue)</label>
+      <input type="number" id="pickA" value="2" min="0" max="7" oninput="updatePickTotal()">
+    </div>
+    <div class="form-group">
+      <label for="pickB">Numbers from <span style="color:#34d399;">Group B</span> (middle)</label>
+      <input type="number" id="pickB" value="2" min="0" max="7" oninput="updatePickTotal()">
+    </div>
+    <div class="form-group">
+      <label for="pickC">Numbers from <span style="color:#e879f9;">Group C</span> (recent)</label>
+      <input type="number" id="pickC" value="2" min="0" max="7" oninput="updatePickTotal()">
+    </div>
+    <div class="form-group">
+      <label for="pickD">Numbers from <span style="color:#fbbf24;">Group D</span> (last draw)</label>
+      <input type="number" id="pickD" value="1" min="0" max="7" oninput="updatePickTotal()">
+    </div>
+  </div>
+</div>
+
+<button class="btn" onclick="generate()">Pick Numbers</button>
+
+<div id="errorBox" class="error" style="display:none;"></div>
+<div id="results"></div>
+
+<script>
+// ─── Pick total counter ───────────────────────────────────────────────────────
+function updatePickTotal() {
+  const total = ['pickA','pickB','pickC','pickD']
+    .reduce((sum, id) => sum + (parseInt(document.getElementById(id).value, 10) || 0), 0);
+  const totalEl = document.getElementById('pickTotal');
+  const statusEl = document.getElementById('pickTotalStatus');
+  totalEl.textContent = total;
+  if (total === 7) {
+    totalEl.style.color = '#34d399';
+    statusEl.textContent = '✓';
+    statusEl.style.color = '#34d399';
+  } else {
+    totalEl.style.color = total > 7 ? '#f87171' : '#fbbf24';
+    statusEl.textContent = total > 7 ? `(${total - 7} too many)` : `(need ${7 - total} more)`;
+    statusEl.style.color = totalEl.style.color;
+  }
+}
+
+// ─── Tab switching ────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  // match the tab button by order
+  const tabs = document.querySelectorAll('.tabs .tab');
+  if (name === 'paste') tabs[0].classList.add('active');
+  else tabs[1].classList.add('active');
+}
+
+// ─── File loader (FileReader — works with file:/// protocol) ─────────────────
+function loadFile(input) {
+  const status = document.getElementById('fileStatus');
+  const file = input.files[0];
+  if (!file) return;
+  status.style.color = '#64748b';
+  status.textContent = 'Reading…';
+  const reader = new FileReader();
+  reader.onload = e => {
+    const text = e.target.result;
+    document.getElementById('pasteData').value = text;
+    switchTab('paste');
+    status.textContent = `Loaded "${file.name}" (${text.split('\n').length} lines).`;
+  };
+  reader.onerror = () => {
+    status.style.color = '#f87171';
+    status.textContent = 'Failed to read file.';
+  };
+  reader.readAsText(file);
+}
+
+// ─── Parser ───────────────────────────────────────────────────────────────────
+function parseData(text) {
+  const entries = [];
+  const lines = text.split(/\r?\n/);
+  // Pattern: optional whitespace, number, whitespace, number (weeks), whitespace, "week" word
+  const re = /^\s*(\d+)\s+(\d+)\s+weeks?\s*$/i;
+  for (const line of lines) {
+    const m = line.match(re);
+    if (m) {
+      entries.push({ num: parseInt(m[1], 10), weeks: parseInt(m[2], 10) });
+    }
+  }
+  return entries;
+}
+
+// ─── RNG helpers ──────────────────────────────────────────────────────────────
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function pickN(arr, n) {
+  return shuffle(arr).slice(0, n);
+}
+
+// ─── Core algorithm ───────────────────────────────────────────────────────────
+function buildGroups(entries) {
+  // Sort all by weeks descending (most overdue first)
+  const sorted = [...entries].sort((a, b) => b.weeks - a.weeks);
+
+  // Group A: top-7 most overdue, with random tiebreaking at the boundary
+  // Take all numbers that clearly rank in the top 7 by weeks, then randomly
+  // fill remaining slots from the tied group at the cutoff week.
+  const groupA = [];
+  let i = 0;
+  while (i < sorted.length && groupA.length < 7) {
+    const currentWeeks = sorted[i].weeks;
+    // Collect all entries sharing this week value
+    const tier = [];
+    while (i < sorted.length && sorted[i].weeks === currentWeeks) {
+      tier.push(sorted[i]);
+      i++;
+    }
+    const slotsLeft = 7 - groupA.length;
+    if (tier.length <= slotsLeft) {
+      // Whole tier fits — take all
+      groupA.push(...tier);
+    } else {
+      // Tier is larger than slots left — randomly pick from it
+      groupA.push(...pickN(tier, slotsLeft));
+    }
+  }
+
+  // Build week index
+  const byWeek = {};
+  for (const e of entries) {
+    if (!byWeek[e.weeks]) byWeek[e.weeks] = [];
+    byWeek[e.weeks].push(e);
+  }
+
+  // Group D: numbers drawn in the last draw (0 weeks ago)
+  const groupD = (byWeek[0] || []).slice(0, 7);
+
+  // Group C: pick 7 from 1w/2w/3w pools (~40%/30%/30%), excluding Group A and Group D
+  const excludeNums = new Set([
+    ...groupA.map(e => e.num),
+    ...groupD.map(e => e.num),
+  ]);
+  const pool1 = shuffle((byWeek[1] || []).filter(e => !excludeNums.has(e.num)));
+  const pool2 = shuffle((byWeek[2] || []).filter(e => !excludeNums.has(e.num)));
+  const pool3 = shuffle((byWeek[3] || []).filter(e => !excludeNums.has(e.num)));
+
+  // Target counts: 3 from 1w, 2 from 2w, 2 from 3w (≈40/30/30)
+  // If a pool is short, redistribute the deficit to the others in priority order
+  const targets = [{ pool: pool1, want: 3 }, { pool: pool2, want: 2 }, { pool: pool3, want: 2 }];
+  const picked = [];
+  let deficit = 0;
+  for (const slot of targets) {
+    const take = Math.min(slot.pool.length, slot.want + deficit);
+    picked.push(...slot.pool.slice(0, take));
+    deficit = (slot.want + deficit) - take;
+  }
+  // If still short, pull anything remaining from any pool
+  if (picked.length < 7) {
+    const usedNums = new Set(picked.map(e => e.num));
+    const overflow = [...pool1, ...pool2, ...pool3].filter(e => !usedNums.has(e.num));
+    picked.push(...overflow.slice(0, 7 - picked.length));
+  }
+  const groupC = picked.slice(0, 7);
+
+  // Group B: middle band — randomly pick 7 from the median region, excluding A, C, and D
+  const excludeB = new Set([
+    ...groupA.map(e => e.num),
+    ...groupC.map(e => e.num),
+    ...groupD.map(e => e.num),
+  ]);
+  const mid = Math.floor(sorted.length / 2);
+  const bStart = Math.max(0, mid - 3);
+  // Take a wider window (±7 around median) to give random selection room
+  const bWindow = sorted.slice(Math.max(0, bStart - 4), bStart + 11);
+  const bPool = shuffle(bWindow.filter(e => !excludeB.has(e.num)));
+  const groupB = bPool.slice(0, 7);
+
+  return { groupA, groupB, groupC, groupD };
+}
+
+function generateSets(groupA, groupB, groupC, groupD, numSets, pickA, pickB, pickC, pickD) {
+  const sets = [];
+  for (let i = 1; i <= numSets; i++) {
+    const offsetA = (i - 1) % Math.max(groupA.length, 1);
+    const offsetB = (i - 1) % Math.max(groupB.length, 1);
+    const offsetC = (i - 1) % Math.max(groupC.length, 1);
+    const offsetD = groupD.length ? (i - 1) % groupD.length : 0;
+
+    const rotA = [...groupA.slice(offsetA), ...groupA.slice(0, offsetA)];
+    const rotB = [...groupB.slice(offsetB), ...groupB.slice(0, offsetB)];
+    const rotC = [...groupC.slice(offsetC), ...groupC.slice(0, offsetC)];
+    const rotD = groupD.length ? [...groupD.slice(offsetD), ...groupD.slice(0, offsetD)] : [];
+
+    let fromA = rotA.slice(0, pickA);
+    let fromB = rotB.slice(0, pickB);
+    let fromC = rotC.slice(0, pickC);
+    let fromD = rotD.slice(0, pickD);
+
+    // Random swap within each group's pool
+    const maybeSwap = (from, pool) => {
+      if (from.length > 0 && Math.random() > 0.4 && pool.length) {
+        const idx = Math.floor(Math.random() * from.length);
+        from[idx] = pool[Math.floor(Math.random() * pool.length)];
+      }
+    };
+    maybeSwap(fromA, rotA.filter(e => !fromA.includes(e)));
+    maybeSwap(fromB, rotB.filter(e => !fromB.includes(e)));
+    maybeSwap(fromC, rotC.filter(e => !fromC.includes(e)));
+
+    const combined = [
+      ...fromA.map(e => ({ ...e, src: 'A' })),
+      ...fromB.map(e => ({ ...e, src: 'B' })),
+      ...fromC.map(e => ({ ...e, src: 'C' })),
+      ...fromD.map(e => ({ ...e, src: 'D' })),
+    ].sort((a, b) => a.num - b.num);
+
+    sets.push({ id: i, numbers: combined, fromA, fromB, fromC, fromD });
+  }
+  return sets;
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+function renderAllNumbers(entries) {
+  // Group by weeks, sort weeks descending
+  const byWeek = {};
+  for (const e of entries) {
+    if (!byWeek[e.weeks]) byWeek[e.weeks] = [];
+    byWeek[e.weeks].push(e.num);
+  }
+  const weekKeys = Object.keys(byWeek).map(Number).sort((a, b) => b - a);
+
+  const rows = weekKeys.map(w => {
+    const nums = byWeek[w].sort((a, b) => a - b)
+      .map(n => `<span class="pill pill-plain">${n}</span>`)
+      .join('');
+    const label = w === 0 ? 'Last draw' : `${w} week${w === 1 ? '' : 's'}`;
+    return `<tr>
+      <td class="set-num" style="white-space:nowrap;">${label}</td>
+      <td style="padding:0.4rem 0.75rem;"><div class="num-pills">${nums}</div></td>
+    </tr>`;
+  }).join('');
+
+  return `
+  <div class="card">
+    <h2>All Numbers by Period</h2>
+    <p style="font-size:0.78rem;color:#64748b;margin-bottom:0.75rem;">All numbers from the data source, grouped and ordered by weeks since last draw (highest first).</p>
+    <table class="sets-table">
+      <thead><tr><th>Period</th><th>Numbers</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+function renderGroups(groupA, groupB, groupC, groupD, pickA, pickB, pickC, pickD) {
+  const pillsA = groupA.map(e =>
+    `<span class="pill pill-a">${e.num}<span class="weeks">${e.weeks}w</span></span>`
+  ).join('');
+  const pillsB = groupB.map(e =>
+    `<span class="pill pill-b">${e.num}<span class="weeks">${e.weeks}w</span></span>`
+  ).join('');
+  const pillsC = groupC.map(e =>
+    `<span class="pill pill-c">${e.num}<span class="weeks">${e.weeks}w</span></span>`
+  ).join('');
+  const pillsD = groupD.length
+    ? groupD.map(e => `<span class="pill pill-d">${e.num}<span class="weeks">0w</span></span>`).join('')
+    : '<span style="font-size:0.8rem;color:#64748b;">No numbers with 0 weeks in data</span>';
+
+  const pickBadge = (n, cls) =>
+    `<span style="display:inline-block;margin-left:0.4rem;padding:0.1rem 0.5rem;border-radius:999px;font-size:0.72rem;font-weight:700;background:${cls.bg};color:${cls.color};border:1px solid ${cls.border};">picking ${n}</span>`;
+
+  const badgeA = pickBadge(pickA, { bg:'#1e1b4b', color:'#818cf8', border:'#3730a3' });
+  const badgeB = pickBadge(pickB, { bg:'#022c22', color:'#34d399', border:'#065f46' });
+  const badgeC = pickBadge(pickC, { bg:'#1c1017', color:'#e879f9', border:'#86198f' });
+  const badgeD = pickBadge(pickD, { bg:'#1a1500', color:'#fbbf24', border:'#b45309' });
+
+  return `
+  <div class="card">
+    <h2>Groups</h2>
+    <div class="groups" style="grid-template-columns:1fr 1fr 1fr 1fr;">
+      <div class="group-box group-a">
+        <h3>Group A — Overdue ${badgeA}</h3>
+        <p class="group-desc">Top 7 numbers with the longest time since last appearance (highest weeks).</p>
+        <div class="num-pills">${pillsA}</div>
+      </div>
+      <div class="group-box group-b">
+        <h3>Group B — Middle ${badgeB}</h3>
+        <p class="group-desc">7 randomly picked from the median band, excluding Group A, C &amp; D.</p>
+        <div class="num-pills">${pillsB}</div>
+      </div>
+      <div class="group-box group-c">
+        <h3>Group C — Recent ${badgeC}</h3>
+        <p class="group-desc">7 randomly picked from 1w/2w/3w pools (~40%/30%/30%), excluding Group A &amp; D.</p>
+        <div class="num-pills">${pillsC}</div>
+      </div>
+      <div class="group-box group-d">
+        <h3>Group D — Last Draw ${badgeD}</h3>
+        <p class="group-desc">Numbers drawn in the most recent draw (0 weeks ago).</p>
+        <div class="num-pills">${pillsD}</div>
+      </div>
+    </div>
+  </div>
+  <button class="btn" onclick="generate()" style="margin-top:0;">Randomise</button>`;
+}
+
+function renderSets(sets, pickA, pickB, pickC, pickD) {
+  const rows = sets.map(s => {
+    const nums = s.numbers.map(e => {
+      if (e.src === 'A') return `<span class="num-from-a">${e.num}</span>`;
+      if (e.src === 'B') return `<span class="num-from-b">${e.num}</span>`;
+      if (e.src === 'C') return `<span class="num-from-c">${e.num}</span>`;
+      return `<span class="num-from-d">${e.num}</span>`;
+    }).join('');
+
+    const aList = s.fromA.map(e => e.num).sort((a,b)=>a-b).join(', ');
+    const bList = s.fromB.map(e => e.num).sort((a,b)=>a-b).join(', ');
+    const cList = s.fromC.map(e => e.num).sort((a,b)=>a-b).join(', ');
+    const dList = s.fromD.map(e => e.num).sort((a,b)=>a-b).join(', ') || '—';
+
+    return `<tr>
+      <td class="set-num">${s.id}</td>
+      <td>
+        <div>${nums}</div>
+        <div class="breakdown">${s.fromA.length}A + ${s.fromB.length}B + ${s.fromC.length}C + ${s.fromD.length}D → A: [${aList}] &nbsp;·&nbsp; B: [${bList}] &nbsp;·&nbsp; C: [${cList}] &nbsp;·&nbsp; D: [${dList}]</div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  return `
+  <div class="card">
+    <h2>Generated Sets</h2>
+    <div class="legend">
+      <span><span class="dot-a"></span> Group A (overdue) &nbsp;<strong>picking ${pickA}</strong></span>
+      <span><span class="dot-b"></span> Group B (middle) &nbsp;<strong>picking ${pickB}</strong></span>
+      <span><span class="dot-c"></span> Group C (recent) &nbsp;<strong>picking ${pickC}</strong></span>
+      <span><span class="dot-d"></span> Group D (last draw) &nbsp;<strong>picking ${pickD}</strong></span>
+    </div>
+    <br>
+    <table class="sets-table">
+      <thead><tr><th>#</th><th>Numbers</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+// ─── Main generate ────────────────────────────────────────────────────────────
+function showError(msg) {
+  const box = document.getElementById('errorBox');
+  box.textContent = msg;
+  box.style.display = 'block';
+}
+
+function clearError() {
+  document.getElementById('errorBox').style.display = 'none';
+}
+
+function getData() {
+  const activeTab = document.querySelector('.tab-panel.active').id;
+  if (activeTab === 'tab-paste') {
+    return document.getElementById('pasteData').value;
+  }
+  // file tab — data might have been loaded into textarea
+  return document.getElementById('pasteData').value;
+}
+
+async function generate() {
+  clearError();
+  document.getElementById('results').innerHTML = '';
+
+  // If on file tab and paste is empty, auto-load first
+  const activeTab = document.querySelector('.tab-panel.active').id;
+  if (activeTab === 'tab-file' && !document.getElementById('pasteData').value.trim()) {
+    await loadFile();
+  }
+
+  const rawData = getData();
+  if (!rawData.trim()) {
+    showError('No data found. Please load a file or paste frequency data.');
+    return;
+  }
+
+  const entries = parseData(rawData);
+  if (entries.length < 7) {
+    showError(`Only ${entries.length} valid entries found — need at least 7. Check your data format.`);
+    return;
+  }
+
+  const numSets = Math.max(1, Math.min(50, parseInt(document.getElementById('numSets').value, 10) || 8));
+  const pickA = Math.max(0, Math.min(7, parseInt(document.getElementById('pickA').value, 10) || 0));
+  const pickB = Math.max(0, Math.min(7, parseInt(document.getElementById('pickB').value, 10) || 0));
+  const pickC = Math.max(0, Math.min(7, parseInt(document.getElementById('pickC').value, 10) || 0));
+  const pickD = Math.max(0, Math.min(7, parseInt(document.getElementById('pickD').value, 10) || 0));
+  if (pickA + pickB + pickC + pickD !== 7) {
+    showError(`Group picks must sum to exactly 7 — current total is ${pickA + pickB + pickC + pickD}.`);
+    return;
+  }
+
+  const { groupA, groupB, groupC, groupD } = buildGroups(entries);
+  if (groupC.length < 2) {
+    showError(`Could not build Group C (only ${groupC.length} recent numbers found). Ensure your data has numbers with small week values.`);
+    return;
+  }
+
+  const sets = generateSets(groupA, groupB, groupC, groupD, numSets, pickA, pickB, pickC, pickD);
+
+  document.getElementById('results').innerHTML =
+    renderAllNumbers(entries) +
+    renderGroups(groupA, groupB, groupC, groupD, pickA, pickB, pickC, pickD) +
+    renderSets(sets, pickA, pickB, pickC, pickD);
+}
+
+</script>
+</body>
+</html>
