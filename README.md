@@ -18,8 +18,9 @@ My Playground - Lottery Picker (vibe coded)
 
 ## Why
 
-- A lottery picker was one of my very first personal project that I wrote in PHP back in maybe 2002. It is fun to have AI to recreate some of its functionality. And no, I don't have the php source anymore :()
-- I vibed coded a simple Powerball (AU) picker today, and purchased 8 games it generated. Let's see will I win anything today (2026-04-09).
+- Lottery picker is one of my very first personal project that I wrote in PHP back in maybe 2002. It is fun to have AI to recreate some of its functionality. And no, I don't have the php source anymore :(
+- I vibed coded a simple Powerball (AU) picker today, and purchased 8 games it generated. Let's see will I win anything today (2026-04-09)
+  - Probably as expected, winning nothing..
 
 ## Vibe coding
 

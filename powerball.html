@@ -77,6 +77,13 @@
   .dot-b { width: 10px; height: 10px; background: #059669; border-radius: 2px; }
   .dot-c { width: 10px; height: 10px; background: #a21caf; border-radius: 2px; }
   .dot-d { width: 10px; height: 10px; background: #b45309; border-radius: 2px; }
+  .num-match {
+    outline: 2px solid #fde047;
+    outline-offset: 1px;
+    border-radius: 4px;
+    box-shadow: 0 0 6px 1px rgba(253,224,71,0.55);
+    position: relative;
+  }
   /* Tab toggle for data source */
   .tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
   .tab { padding: 0.4rem 0.9rem; border-radius: 6px; font-size: 0.82rem; font-weight: 500; cursor: pointer; border: 1px solid #334155; background: transparent; color: #94a3b8; transition: all 0.15s; }
@@ -149,11 +156,11 @@
   <div class="form-row" style="margin-top:1rem;">
     <div class="form-group">
       <label for="pickA">Numbers from <span style="color:#818cf8;">Group A</span> (overdue)</label>
-      <input type="number" id="pickA" value="2" min="0" max="7" oninput="updatePickTotal()">
+      <input type="number" id="pickA" value="1" min="0" max="7" oninput="updatePickTotal()">
     </div>
     <div class="form-group">
       <label for="pickB">Numbers from <span style="color:#34d399;">Group B</span> (middle)</label>
-      <input type="number" id="pickB" value="2" min="0" max="7" oninput="updatePickTotal()">
+      <input type="number" id="pickB" value="3" min="0" max="7" oninput="updatePickTotal()">
     </div>
     <div class="form-group">
       <label for="pickC">Numbers from <span style="color:#e879f9;">Group C</span> (recent)</label>
@@ -289,7 +296,11 @@ function buildGroups(entries) {
   // Group D: numbers drawn in the last draw (0 weeks ago)
   const groupD = (byWeek[0] || []).slice(0, 7);
 
-  // Group C: pick 7 from 1w/2w/3w pools (~40%/30%/30%), excluding Group A and Group D
+  // Group C: 7 numbers drawn from 1w/2w/3w pools at 40%/30%/30% probability.
+  // That targets 3 from 1w, 2 from 2w, 2 from 3w.
+  // If any pool is too small, its shortfall is redistributed proportionally to the
+  // remaining pools. If 1w+2w+3w still can't supply 7, week 4 is included at equal
+  // 25%/25%/25%/25% weight across all four periods.
   const excludeNums = new Set([
     ...groupA.map(e => e.num),
     ...groupD.map(e => e.num),
@@ -298,36 +309,71 @@ function buildGroups(entries) {
   const pool2 = shuffle((byWeek[2] || []).filter(e => !excludeNums.has(e.num)));
   const pool3 = shuffle((byWeek[3] || []).filter(e => !excludeNums.has(e.num)));
 
-  // Target counts: 3 from 1w, 2 from 2w, 2 from 3w (≈40/30/30)
-  // If a pool is short, redistribute the deficit to the others in priority order
-  const targets = [{ pool: pool1, want: 3 }, { pool: pool2, want: 2 }, { pool: pool3, want: 2 }];
-  const picked = [];
-  let deficit = 0;
-  for (const slot of targets) {
-    const take = Math.min(slot.pool.length, slot.want + deficit);
-    picked.push(...slot.pool.slice(0, take));
-    deficit = (slot.want + deficit) - take;
+  // Determine whether week 4 is needed
+  const use4weeks = pool1.length + pool2.length + pool3.length < 7;
+  const pool4 = use4weeks ? shuffle((byWeek[4] || []).filter(e => !excludeNums.has(e.num))) : [];
+
+  // Build slots with initial weights, then iteratively redistribute shortfalls
+  // proportionally until allocations stabilise.
+  const slots = use4weeks
+    ? [{ pool: pool1, w: 0.25 }, { pool: pool2, w: 0.25 }, { pool: pool3, w: 0.25 }, { pool: pool4, w: 0.25 }]
+    : [{ pool: pool1, w: 0.40 }, { pool: pool2, w: 0.30 }, { pool: pool3, w: 0.30 }];
+
+  const alloc = slots.map(() => 0);
+  let remaining = 7;
+
+  // Up to 10 redistribution passes to handle cascading shortfalls
+  for (let pass = 0; pass < 10 && remaining > 0; pass++) {
+    const freeSlots = slots.filter((s, i) => s.pool.length > alloc[i]);
+    if (freeSlots.length === 0) break;
+    const totalWeight = freeSlots.reduce((sum, s) => sum + s.w, 0);
+
+    let distributed = 0;
+    for (let i = 0; i < slots.length; i++) {
+      const cap = slots[i].pool.length - alloc[i];
+      if (cap <= 0) continue;
+      const share = Math.round((slots[i].w / totalWeight) * remaining);
+      const take = Math.min(cap, share);
+      alloc[i] += take;
+      distributed += take;
+    }
+
+    // Fix any rounding gap: assign leftover to the slot with most remaining capacity
+    let roundingGap = remaining - distributed;
+    if (roundingGap !== 0) {
+      // find slot with most spare capacity and adjust
+      let bestIdx = -1, bestCap = 0;
+      for (let i = 0; i < slots.length; i++) {
+        const cap = slots[i].pool.length - alloc[i];
+        if (cap > bestCap) { bestCap = cap; bestIdx = i; }
+      }
+      if (bestIdx >= 0) alloc[bestIdx] += roundingGap;
+    }
+
+    remaining = 7 - alloc.reduce((s, v) => s + v, 0);
   }
-  // If still short, pull anything remaining from any pool
-  if (picked.length < 7) {
-    const usedNums = new Set(picked.map(e => e.num));
-    const overflow = [...pool1, ...pool2, ...pool3].filter(e => !usedNums.has(e.num));
-    picked.push(...overflow.slice(0, 7 - picked.length));
+
+  const picked = [];
+  for (let i = 0; i < slots.length; i++) {
+    picked.push(...slots[i].pool.slice(0, alloc[i]));
   }
   const groupC = picked.slice(0, 7);
 
-  // Group B: middle band — randomly pick 7 from the median region, excluding A, C, and D
+  // Group B: all numbers not in A, C, D, and not from any week period that was
+  // activated as a Group C pool. If Group C only needed weeks 1–3, then week 4
+  // numbers are eligible for Group B. If week 4 was activated (use4weeks=true),
+  // those numbers are excluded from Group B too.
+  const groupCPoolWeeks = use4weeks ? [1, 2, 3, 4] : [1, 2, 3];
+  const groupCPoolNums = new Set(
+    groupCPoolWeeks.flatMap(w => (byWeek[w] || []).map(e => e.num))
+  );
   const excludeB = new Set([
     ...groupA.map(e => e.num),
     ...groupC.map(e => e.num),
     ...groupD.map(e => e.num),
   ]);
-  const mid = Math.floor(sorted.length / 2);
-  const bStart = Math.max(0, mid - 3);
-  // Take a wider window (±7 around median) to give random selection room
-  const bWindow = sorted.slice(Math.max(0, bStart - 4), bStart + 11);
-  const bPool = shuffle(bWindow.filter(e => !excludeB.has(e.num)));
-  const groupB = bPool.slice(0, 7);
+  const groupB = entries.filter(e => !excludeB.has(e.num) && !groupCPoolNums.has(e.num))
+    .sort((a, b) => b.weeks - a.weeks);
 
   return { groupA, groupB, groupC, groupD };
 }
@@ -438,12 +484,12 @@ function renderGroups(groupA, groupB, groupC, groupD, pickA, pickB, pickC, pickD
       </div>
       <div class="group-box group-b">
         <h3>Group B — Middle ${badgeB}</h3>
-        <p class="group-desc">7 randomly picked from the median band, excluding Group A, C &amp; D.</p>
+        <p class="group-desc">All numbers not in Group A, C, or D, and not from any week period activated as a Group C pool (weeks 1–3 normally; weeks 1–4 if week 4 was needed to fill Group C).</p>
         <div class="num-pills">${pillsB}</div>
       </div>
       <div class="group-box group-c">
         <h3>Group C — Recent ${badgeC}</h3>
-        <p class="group-desc">7 randomly picked from 1w/2w/3w pools (~40%/30%/30%), excluding Group A &amp; D.</p>
+        <p class="group-desc">7 randomly picked from 1w/2w/3w at 40%/30%/30% (≈3/2/2). Shortfalls redistributed proportionally. If 1–3w can't supply 7, week 4 is included at equal 25% each.</p>
         <div class="num-pills">${pillsC}</div>
       </div>
       <div class="group-box group-d">
@@ -459,10 +505,8 @@ function renderGroups(groupA, groupB, groupC, groupD, pickA, pickB, pickC, pickD
 function renderSets(sets, pickA, pickB, pickC, pickD) {
   const rows = sets.map(s => {
     const nums = s.numbers.map(e => {
-      if (e.src === 'A') return `<span class="num-from-a">${e.num}</span>`;
-      if (e.src === 'B') return `<span class="num-from-b">${e.num}</span>`;
-      if (e.src === 'C') return `<span class="num-from-c">${e.num}</span>`;
-      return `<span class="num-from-d">${e.num}</span>`;
+      const cls = e.src === 'A' ? 'num-from-a' : e.src === 'B' ? 'num-from-b' : e.src === 'C' ? 'num-from-c' : 'num-from-d';
+      return `<span class="${cls}" data-num="${e.num}">${e.num}</span>`;
     }).join('');
 
     const aList = s.fromA.map(e => e.num).sort((a,b)=>a-b).join(', ');
@@ -488,12 +532,64 @@ function renderSets(sets, pickA, pickB, pickC, pickD) {
       <span><span class="dot-c"></span> Group C (recent) &nbsp;<strong>picking ${pickC}</strong></span>
       <span><span class="dot-d"></span> Group D (last draw) &nbsp;<strong>picking ${pickD}</strong></span>
     </div>
-    <br>
-    <table class="sets-table">
-      <thead><tr><th>#</th><th>Numbers</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
+    <div style="display:grid;grid-template-columns:1fr 260px;gap:1.5rem;margin-top:1rem;align-items:start;">
+      <!-- Left: generated sets table -->
+      <div style="overflow-x:auto;">
+        <table class="sets-table" id="setsTable" style="white-space:nowrap;">
+          <thead><tr><th>#</th><th>Numbers</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <!-- Right: winning numbers checker -->
+      <div style="position:sticky;top:1rem;display:flex;flex-direction:column;gap:0.75rem;">
+        <div class="form-group" style="margin:0;">
+          <label for="winningNums" style="display:block;padding:0.5rem 0;color:#64748b;font-weight:500;font-size:0.8rem;border-bottom:1px solid #334155;margin-bottom:0.4rem;">Winning numbers</label>
+          <input type="text" id="winningNums" placeholder="e.g. 5 12 23 34 41 7">
+        </div>
+        <button onclick="checkWinners()" style="width:100%;padding:0.6rem 1rem;background:#334155;border:1px solid #475569;border-radius:8px;color:#f8fafc;font-size:0.88rem;font-weight:600;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='#475569'" onmouseout="this.style.background='#334155'">Check matches</button>
+        <button onclick="clearWinners()" style="width:100%;padding:0.6rem 1rem;background:transparent;border:1px solid #334155;border-radius:8px;color:#64748b;font-size:0.88rem;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">Clear</button>
+        <div id="winnerStatus" style="font-size:0.78rem;color:#64748b;min-height:1.2em;"></div>
+      </div>
+    </div>
   </div>`;
+}
+
+// ─── Winner checker ───────────────────────────────────────────────────────────
+function checkWinners() {
+  const raw = document.getElementById('winningNums').value;
+  const winSet = new Set(
+    raw.split(/[\s,]+/).map(s => parseInt(s, 10)).filter(n => !isNaN(n))
+  );
+  const statusEl = document.getElementById('winnerStatus');
+  if (winSet.size === 0) {
+    statusEl.style.color = '#f87171';
+    statusEl.textContent = 'Enter at least one winning number.';
+    return;
+  }
+
+  let totalMatches = 0;
+  document.querySelectorAll('#setsTable [data-num]').forEach(el => {
+    const n = parseInt(el.dataset.num, 10);
+    if (winSet.has(n)) {
+      el.classList.add('num-match');
+      totalMatches++;
+    } else {
+      el.classList.remove('num-match');
+    }
+  });
+
+  statusEl.style.color = totalMatches > 0 ? '#fde047' : '#64748b';
+  statusEl.textContent = totalMatches > 0
+    ? `${totalMatches} match${totalMatches === 1 ? '' : 'es'} found across all sets (highlighted in yellow).`
+    : 'No matches found.';
+}
+
+function clearWinners() {
+  const input = document.getElementById('winningNums');
+  if (input) input.value = '';
+  const statusEl = document.getElementById('winnerStatus');
+  if (statusEl) statusEl.textContent = '';
+  document.querySelectorAll('#setsTable [data-num]').forEach(el => el.classList.remove('num-match'));
 }
 
 // ─── Main generate ────────────────────────────────────────────────────────────
@@ -518,6 +614,8 @@ function getData() {
 
 async function generate() {
   clearError();
+  // Preserve any winning numbers entered before wiping the results DOM
+  const savedWinning = (document.getElementById('winningNums') || {}).value || '';
   document.getElementById('results').innerHTML = '';
 
   // If on file tab and paste is empty, auto-load first
@@ -560,6 +658,12 @@ async function generate() {
     renderAllNumbers(entries) +
     renderGroups(groupA, groupB, groupC, groupD, pickA, pickB, pickC, pickD) +
     renderSets(sets, pickA, pickB, pickC, pickD);
+
+  // Restore winning numbers and auto-check if any were entered
+  if (savedWinning.trim()) {
+    document.getElementById('winningNums').value = savedWinning;
+    checkWinners();
+  }
 }
 
 </script>
