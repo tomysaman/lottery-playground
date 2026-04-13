@@ -10,6 +10,8 @@ My Playground - Lottery Picker (vibe coded)
   - Generate numbers from 4 groups, base on how long the numbers haven't been drew
   - Adjust how many number you want to come out of the 4 groups
   - Set how many sets you want to generate
+  - Check generated numbers aginst winning numbers
+  - Ability to bookmark and share the result
 
 ## To use
 
